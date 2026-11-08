@@ -93,8 +93,8 @@ if "generated_result" not in st.session_state:
 # Боковая панель
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/tooth.png", width=60)
-    st.markdown("### **OrthoAI Suite** v3.8")
-    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● Защита от 503 активна</span>", unsafe_allow_html=True)
+    st.markdown("### **OrthoAI Suite** v3.9")
+    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● Модель обновлена</span>", unsafe_allow_html=True)
     st.markdown("---")
     
     api_key = st.text_input("🔑 Google Gemini API Key:", type="password", placeholder="Введите ключ...")
@@ -111,7 +111,7 @@ with st.sidebar:
         ["Школа Шварца / Стенаера", "Анализ Риккетса", "Джакобс / ТРГ"]
     )
     st.markdown("---")
-    st.info("💡 Используется стабильная версия модели с автоповтором запросов.")
+    st.info("💡 Используется актуальная модель gemini-3.8-flash.")
 
 # Главный экран
 st.title("🦷 Клинический Ортодонтический Координатор")
@@ -195,18 +195,18 @@ if generate_btn:
                     contents.append(Image.open(uploaded_file))
 
                 response = None
-                max_retries = 5
+                max_retries = 3
                 for attempt in range(max_retries):
                     try:
-                        # Используем стабильную версию модели
+                        # Используем правильную и актуальную модель gemini-3.8-flash
                         response = client.models.generate_content(
-                            model='gemini-2.5-flash',
+                            model='gemini-3.8-flash',
                             contents=contents
                         )
                         break
                     except Exception as api_err:
                         if ("503" in str(api_err) or "unavailable" in str(api_err).lower()) and attempt < max_retries - 1:
-                            time.sleep(3 * (attempt + 1)) # Увеличиваем паузу с каждой попыткой (3с, 6с, 9с...)
+                            time.sleep(3)
                             continue
                         else:
                             raise api_err
@@ -215,7 +215,7 @@ if generate_btn:
                     st.session_state.generated_result = response.text
 
             except Exception as e:
-                st.error(f"⚠️ Сервер временно перегружен. Пожалуйста, подождите 10 секунд и нажмите кнопку снова. Ошибка: {e}")
+                st.error(f"⚠️ Ошибка при обращении к API: {e}")
 
 # Отображение результатов из памяти сессии
 if st.session_state.generated_result:
