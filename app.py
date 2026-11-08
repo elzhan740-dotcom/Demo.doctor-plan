@@ -34,13 +34,13 @@ import streamlit.components.v1 as components
 
 # Настройка страницы
 st.set_page_config(
-    page_title="OrthoAI Pro — Clinical Suite", 
+    page_title="OrthoAI Pro — Clinical Suite 3D", 
     page_icon="🦷", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Профессиональный дизайн с прокруткой
+# Профессиональный интерфейс в темных тонах
 st.markdown("""
     <style>
     .stApp {
@@ -86,15 +86,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Инициализация памяти сессии
 if "generated_result" not in st.session_state:
     st.session_state.generated_result = None
 
 # Боковая панель
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/tooth.png", width=60)
-    st.markdown("### **OrthoAI Suite** v3.9")
-    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● Модель обновлена</span>", unsafe_allow_html=True)
+    st.markdown("### **OrthoAI Suite** v4.0")
+    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● 3D Виола-Схема Активна</span>", unsafe_allow_html=True)
     st.markdown("---")
     
     api_key = st.text_input("🔑 Google Gemini API Key:", type="password", placeholder="Введите ключ...")
@@ -110,12 +109,10 @@ with st.sidebar:
         "Цефалометрия:",
         ["Школа Шварца / Стенаера", "Анализ Риккетса", "Джакобс / ТРГ"]
     )
-    st.markdown("---")
-    st.info("💡 Используется актуальная модель gemini-3.8-flash.")
 
 # Главный экран
 st.title("🦷 Клинический Ортодонтический Координатор")
-st.markdown("Профессиональный модуль анализа ТРГ, расчета векторов сил и 3D-визуализации окклюзии.")
+st.markdown("Профессиональный модуль анализа ТРГ, расчета биомеханики и 3D-осмотра зубных рядов по системе Виола (FDI).")
 
 col1, col2 = st.columns([1, 1], gap="large")
 
@@ -132,7 +129,7 @@ with col1:
         if file_ext in ["png", "jpg", "jpeg"]:
             st.image(uploaded_file, caption="Загруженный снимок", use_column_width=True)
         elif file_ext == "pptx":
-            st.success("📊 Данные из презентации успешно извлечены!")
+            st.success("📊 Данные из презентации извлечены!")
             try:
                 prs = Presentation(io.BytesIO(uploaded_file.getvalue()))
                 slide_texts = []
@@ -153,19 +150,19 @@ with col2:
     st.markdown("### 📝 Клиническая задача")
     doctor_notes = st.text_area(
         "Опишите диагноз и требования к лечению:", 
-        placeholder="Например: Полная пошаговая инструкция коррекции дистального прикуса, расчет пружин и векторов тяг без воды...",
+        placeholder="Например: Пошаговая инструкция коррекции прикуса, точное расположение пружин по номерам зубов...",
         height=210
     )
     
     generate_btn = st.button("🚀 Запустить расчет и 3D-моделирование")
 
 SYSTEM_PROMPT = f"""
-Роль: Ты — ведущий профессор ортодонтии, доктор медицинских наук. Дай исчерпывающий, пошаговый и клинически точный протокол лечения без лишней воды.
+Роль: Ты — ведущий профессор ортодонтии, доктор медицинских наук. Дай пошаговый и клинически точный протокол лечения без лишней воды.
 Аппаратура: {appliance_type}.
 Цефалометрия: {cepha_school}.
 
 Правила:
-1. Подробная биомеханика: укажи точное место для пружин (Open Coil Spring между какими зубами по системе Виола), вектор сил, межчелюстные тяги и накладки.
+1. Подробная биомеханика: укажи точное место для пружин (Open Coil Spring между какими зубами по системе Виола 11-48), вектор сил, межчелюстные тяги.
 2. Формат вывода:
    - Анализ цефалометрии и диагноз.
    - Этап 1. Санация.
@@ -178,11 +175,11 @@ SYSTEM_PROMPT = f"""
 
 if generate_btn:
     if not api_key:
-        st.error("⚠️ Введите Google Gemini API Key в боковой панели слева!")
+        st.error("⚠️ Введите Google Gemini API Key в боковой панели!")
     elif not doctor_notes and not uploaded_file:
         st.warning("⚠️ Загрузите файл или введите описание задачи!")
     else:
-        with st.spinner("🔬 Профессор рассчитывает биомеханику и генерирует цифровую модель..."):
+        with st.spinner("🔬 Профессор рассчитывает биомеханику и генерирует 3D-схему..."):
             try:
                 client = genai.Client(api_key=api_key)
                 
@@ -198,7 +195,6 @@ if generate_btn:
                 max_retries = 3
                 for attempt in range(max_retries):
                     try:
-                        # Используем правильную и актуальную модель gemini-3.8-flash
                         response = client.models.generate_content(
                             model='gemini-3.8-flash',
                             contents=contents
@@ -217,12 +213,12 @@ if generate_btn:
             except Exception as e:
                 st.error(f"⚠️ Ошибка при обращении к API: {e}")
 
-# Отображение результатов из памяти сессии
+# Вывод результатов и 3D-модели
 if st.session_state.generated_result:
     st.markdown("---")
-    st.success("✅ Протокол успешно сформирован и зафиксирован в памяти сессии!")
+    st.success("✅ Протокол сформирован!")
     
-    tab1, tab2 = st.tabs(["📋 Экспертный протокол", "🎮 3D Интерактивный осмотр окклюзии"])
+    tab1, tab2 = st.tabs(["📋 Экспертный протокол", "🎮 3D Анатомическая схема (FDI Виола)"])
     
     with tab1:
         st.markdown(st.session_state.generated_result)
@@ -233,28 +229,29 @@ if st.session_state.generated_result:
         )
 
     with tab2:
-        st.markdown("### 🧊 3D Интерактивная модель челюсти и окклюзии")
-        st.markdown("<span style='color: #94a3b8; font-size: 14px;'>🖱️ Зажмите ЛКМ и двигайте мышь для вращения модели | 📜 Колесико мыши: Зумирование</span>", unsafe_allow_html=True)
+        st.markdown("### 🧊 3D Зубочелюстная карта с международной нумерацией")
+        st.markdown("<span style='color: #94a3b8; font-size: 14px;'>🖱️ Зажмите ЛКМ и вращайте модель | 📜 Колесико: Зумирование к зубам</span>", unsafe_allow_html=True)
         
-        native_3d_code = """
+        # Интерактивная 3D-карта зубной дуги с нумерацией Виола (11-48)
+        fdi_3d_code = """
         <!DOCTYPE html>
         <html>
         <head>
             <style>
-                body { margin: 0; background-color: #0b0f17; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 520px; }
+                body { margin: 0; background-color: #0b0f17; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 620px; }
                 canvas { background: #07090e; border-radius: 12px; border: 1px solid #1e293b; cursor: grab; }
                 canvas:active { cursor: grabbing; }
-                .hud { position: absolute; top: 15px; left: 15px; color: #38ef7d; font-family: monospace; font-size: 12px; pointer-events: none; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; border: 1px solid #1e293b; }
+                .hud { position: absolute; top: 15px; left: 15px; color: #00f2fe; font-family: monospace; font-size: 13px; pointer-events: none; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 6px; border: 1px solid #1e293b; }
             </style>
         </head>
         <body>
-            <div class="hud">STATUS: 3D_OCCLUSION_ACTIVE // CS_INSPECT_MODE</div>
-            <canvas id="c" width="750" height="480"></canvas>
+            <div class="hud">SYSTEM: FDI_VIOLA_3D // ANATOMICAL_MAP</div>
+            <canvas id="c" width="850" height="580"></canvas>
             <script>
                 const canvas = document.getElementById('c');
                 const ctx = canvas.getContext('2d');
 
-                let rotX = 0.4;
+                let rotX = 0.5;
                 let rotY = 0;
                 let zoom = 1.0;
                 let isDragging = false;
@@ -264,40 +261,51 @@ if st.session_state.generated_result:
                 window.addEventListener('mouseup', () => isDragging = false);
                 window.addEventListener('mousemove', e => {
                     if (!isDragging) return;
-                    rotY += (e.clientX - lastX) * 0.01;
-                    rotX += (e.clientY - lastY) * 0.01;
+                    rotY += (e.clientX - lastX) * 0.008;
+                    rotX += (e.clientY - lastY) * 0.008;
                     lastX = e.clientX;
                     lastY = e.clientY;
                 });
                 canvas.addEventListener('wheel', e => {
                     e.preventDefault();
                     zoom += e.deltaY * -0.001;
-                    zoom = Math.max(0.6, Math.min(2.0, zoom));
+                    zoom = Math.max(0.5, Math.min(2.2, zoom));
                 });
 
-                function getTeeth() {
+                // База зубных номеров FDI
+                const upperTeethFDI = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+                const lowerTeethFDI = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+
+                function getTeethData() {
                     let teeth = [];
-                    for (let jaw = -1; jaw <= 1; jaw += 2) {
-                        for (let i = -6; i <= 6; i++) {
-                            let angle = i * 0.22;
-                            let x = Math.sin(angle) * 110;
-                            let z = Math.cos(angle) * 110 - 30;
-                            let y = jaw * 45;
-                            teeth.push({x, y, z, jaw, id: i});
-                        }
+                    // Верхняя челюсть (Upper)
+                    for (let i = 0; i < 16; i++) {
+                        let angle = (i / 15 - 0.5) * Math.PI * 0.85;
+                        let radius = 140;
+                        let x = Math.sin(angle) * radius;
+                        let z = Math.cos(angle) * radius - 40;
+                        teeth.push({ x, y: -55, z, fdi: upperTeethFDI[i], jaw: 'upper' });
+                    }
+                    // Нижняя челюсть (Lower)
+                    for (let i = 0; i < 16; i++) {
+                        let angle = (i / 15 - 0.5) * Math.PI * 0.85;
+                        let radius = 132;
+                        let x = Math.sin(angle) * radius;
+                        let z = Math.cos(angle) * radius - 40;
+                        teeth.push({ x, y: 55, z, fdi: lowerTeethFDI[i], jaw: 'lower' });
                     }
                     return teeth;
                 }
-                const teeth = getTeeth();
+                const teethData = getTeethData();
 
                 function draw() {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.save();
                     ctx.translate(canvas.width / 2, canvas.height / 2);
 
-                    if (!isDragging) rotY += 0.008;
+                    if (!isDragging) rotY += 0.005;
 
-                    let projected = teeth.map(t => {
+                    let projected = teethData.map(t => {
                         let x1 = t.x * Math.cos(rotY) - t.z * Math.sin(rotY);
                         let z1 = t.x * Math.sin(rotY) + t.z * Math.cos(rotY);
                         let y1 = t.y;
@@ -306,13 +314,14 @@ if st.session_state.generated_result:
                         let z2 = y1 * Math.sin(rotX) + z1 * Math.cos(rotX);
                         let x2 = x1;
 
-                        let fov = 400;
-                        let scale = (fov / (fov + z2 + 200)) * zoom;
+                        let fov = 450;
+                        let scale = (fov / (fov + z2 + 250)) * zoom;
                         return {
                             x: x2 * scale,
                             y: y2 * scale,
                             z: z2,
                             scale: scale,
+                            fdi: t.fdi,
                             jaw: t.jaw
                         };
                     });
@@ -324,17 +333,26 @@ if st.session_state.generated_result:
                         ctx.translate(p.x, p.y);
                         ctx.scale(p.scale, p.scale);
 
-                        ctx.fillStyle = p.jaw < 0 ? '#f8fafc' : '#e2e8f0';
+                        // Отрисовка зуба (анатомический 3D-блок)
+                        ctx.fillStyle = '#f8fafc';
                         ctx.strokeStyle = '#0284c7';
                         ctx.lineWidth = 2;
 
                         ctx.beginPath();
-                        ctx.roundRect(-12, -16, 24, 32, 6);
+                        ctx.roundRect(-14, -18, 28, 36, 8);
                         ctx.fill();
                         ctx.stroke();
 
+                        // Металлический брекет в центре зуба
                         ctx.fillStyle = '#00f2fe';
-                        ctx.fillRect(-4, -4, 8, 8);
+                        ctx.fillRect(-5, -5, 10, 10);
+
+                        // Номер зуба по Виола (FDI)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(p.fdi, 0, p.jaw === 'upper' ? -28 : 28);
 
                         ctx.restore();
                     });
@@ -347,4 +365,4 @@ if st.session_state.generated_result:
         </body>
         </html>
         """
-        components.html(native_3d_code, height=540)
+        components.html(fdi_3d_code, height=640)
