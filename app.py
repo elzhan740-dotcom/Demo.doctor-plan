@@ -361,3 +361,133 @@ if st.session_state.generated_result:
         </html>
         """
         components.html(native_3d_code, height=640)
+native_3d_code = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { margin: 0; background-color: #0b0f17; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 620px; }
+                canvas { background: #07090e; border-radius: 12px; border: 1px solid #1e293b; cursor: grab; }
+                canvas:active { cursor: grabbing; }
+                .hud { position: absolute; top: 15px; left: 15px; color: #00f2fe; font-family: monospace; font-size: 13px; pointer-events: none; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 6px; border: 1px solid #1e293b; }
+            </style>
+        </head>
+        <body>
+            <div class="hud">SYSTEM: 3D_JAW_ARCH // FDI_VIOLA</div>
+            <canvas id="c" width="850" height="580"></canvas>
+            <script>
+                const canvas = document.getElementById('c');
+                const ctx = canvas.getContext('2d');
+
+                let rotX = 0.5;
+                let rotY = 0.0;
+                let zoom = 1.0;
+                let isDragging = false;
+                let lastX = 0, lastY = 0;
+
+                canvas.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+                window.addEventListener('mouseup', () => isDragging = false);
+                window.addEventListener('mousemove', e => {
+                    if (!isDragging) return;
+                    rotY += (e.clientX - lastX) * 0.008;
+                    rotX += (e.clientY - lastY) * 0.008;
+                    lastX = e.clientX;
+                    lastY = lastY;
+                    lastY = e.clientY;
+                });
+                canvas.addEventListener('wheel', e => {
+                    e.preventDefault();
+                    zoom += e.deltaY * -0.001;
+                    zoom = Math.max(0.5, Math.min(2.5, zoom));
+                });
+
+                const upperFDI = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+                const lowerFDI = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+
+                function getArch() {
+                    let arch = [];
+                    // Правильная математическая дуга для верхней челюсти
+                    for (let i = 0; i < 16; i++) {
+                        let angle = ((i - 7.5) / 7.5) * 1.1; // дуга полукругом
+                        let x = Math.sin(angle) * 130;
+                        let z = Math.cos(angle) * 110 - 20;
+                        arch.push({ x, y: -35, z, fdi: upperFDI[i], jaw: 'upper' });
+                    }
+                    // Нижняя челюсть (чуть шире/утопленнее)
+                    for (let i = 0; i < 16; i++) {
+                        let angle = ((i - 7.5) / 7.5) * 1.1;
+                        let x = Math.sin(angle) * 120;
+                        let z = Math.cos(angle) * 100 - 20;
+                        arch.push({ x, y: 35, z, fdi: lowerFDI[i], jaw: 'lower' });
+                    }
+                    return arch;
+                }
+                const teeth = getArch();
+
+                function draw() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.save();
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+
+                    if (!isDragging) rotY += 0.003;
+
+                    let projected = teeth.map(t => {
+                        // Вращение по осям X и Y
+                        let x1 = t.x * Math.cos(rotY) - t.z * Math.sin(rotY);
+                        let z1 = t.x * Math.sin(rotY) + t.z * Math.cos(rotY);
+                        let y1 = t.y;
+
+                        let y2 = y1 * Math.cos(rotX) - z1 * Math.sin(rotX);
+                        let z2 = y1 * Math.sin(rotX) + z1 * Math.cos(rotX);
+                        let x2 = x1;
+
+                        let fov = 450;
+                        let scale = (fov / (fov + z2 + 250)) * zoom;
+                        return {
+                            x: x2 * scale,
+                            y: y2 * scale,
+                            z: z2,
+                            scale: scale,
+                            fdi: t.fdi,
+                            jaw: t.jaw
+                        };
+                    });
+
+                    projected.sort((a, b) => a.z - b.z);
+
+                    projected.forEach(p => {
+                        ctx.save();
+                        ctx.translate(p.x, p.y);
+                        ctx.scale(p.scale, p.scale);
+
+                        // Форма зуба
+                        ctx.fillStyle = '#f8fafc';
+                        ctx.strokeStyle = '#0284c7';
+                        ctx.lineWidth = 2;
+
+                        ctx.beginPath();
+                        ctx.roundRect(-12, -16, 24, 32, 6);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        // Брекет
+                        ctx.fillStyle = '#00f2fe';
+                        ctx.fillRect(-4, -4, 8, 8);
+
+                        // Номер Виола
+                        ctx.fillStyle = '#38ef7d';
+                        ctx.font = 'bold 11px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(p.fdi, 0, p.jaw === 'upper' ? -24 : 26);
+
+                        ctx.restore();
+                    });
+
+                    ctx.restore();
+                    requestAnimationFrame(draw);
+                }
+                draw();
+            </script>
+        </body>
+        </html>
+        """
