@@ -40,7 +40,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Профессиональный дизайн с принудительным включением прокрутки
+# Профессиональный дизайн с прокруткой
 st.markdown("""
     <style>
     .stApp {
@@ -80,7 +80,6 @@ st.markdown("""
         font-weight: 700;
         letter-spacing: -0.5px;
     }
-    /* Дополнительный отступ внизу страницы, чтобы всё прокручивалось с запасом */
     .block-container {
         padding-bottom: 5rem;
     }
@@ -94,8 +93,8 @@ if "generated_result" not in st.session_state:
 # Боковая панель
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/tooth.png", width=60)
-    st.markdown("### **OrthoAI Suite** v3.7")
-    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● Система активна (Scroll Fix)</span>", unsafe_allow_html=True)
+    st.markdown("### **OrthoAI Suite** v3.8")
+    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● Защита от 503 активна</span>", unsafe_allow_html=True)
     st.markdown("---")
     
     api_key = st.text_input("🔑 Google Gemini API Key:", type="password", placeholder="Введите ключ...")
@@ -112,7 +111,7 @@ with st.sidebar:
         ["Школа Шварца / Стенаера", "Анализ Риккетса", "Джакобс / ТРГ"]
     )
     st.markdown("---")
-    st.info("💡 Скролл страницы полностью разблокирован для просмотра объемных отчетов.")
+    st.info("💡 Используется стабильная версия модели с автоповтором запросов.")
 
 # Главный экран
 st.title("🦷 Клинический Ортодонтический Координатор")
@@ -196,17 +195,18 @@ if generate_btn:
                     contents.append(Image.open(uploaded_file))
 
                 response = None
-                max_retries = 3
+                max_retries = 5
                 for attempt in range(max_retries):
                     try:
+                        # Используем стабильную версию модели
                         response = client.models.generate_content(
-                            model='gemini-3.8-flash',
+                            model='gemini-2.5-flash',
                             contents=contents
                         )
                         break
                     except Exception as api_err:
-                        if "503" in str(api_err) and attempt < max_retries - 1:
-                            time.sleep(2)
+                        if ("503" in str(api_err) or "unavailable" in str(api_err).lower()) and attempt < max_retries - 1:
+                            time.sleep(3 * (attempt + 1)) # Увеличиваем паузу с каждой попыткой (3с, 6с, 9с...)
                             continue
                         else:
                             raise api_err
@@ -215,7 +215,7 @@ if generate_btn:
                     st.session_state.generated_result = response.text
 
             except Exception as e:
-                st.error(f"Произошла ошибка при обращении к API: {e}")
+                st.error(f"⚠️ Сервер временно перегружен. Пожалуйста, подождите 10 секунд и нажмите кнопку снова. Ошибка: {e}")
 
 # Отображение результатов из памяти сессии
 if st.session_state.generated_result:
