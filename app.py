@@ -40,13 +40,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Профессиональный дизайн в темных тонах
+# Профессиональный дизайн с принудительным включением прокрутки
 st.markdown("""
     <style>
     .stApp {
         background-color: #07090e;
         color: #e2e8f0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        overflow-y: auto !important;
     }
     [data-testid="stSidebar"] {
         background-color: #0b0f17;
@@ -79,18 +80,22 @@ st.markdown("""
         font-weight: 700;
         letter-spacing: -0.5px;
     }
+    /* Дополнительный отступ внизу страницы, чтобы всё прокручивалось с запасом */
+    .block-container {
+        padding-bottom: 5rem;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Инициализация памяти сессии (чтобы данные не пропадали при сбросе/скачивании)
+# Инициализация памяти сессии
 if "generated_result" not in st.session_state:
     st.session_state.generated_result = None
 
 # Боковая панель
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/tooth.png", width=60)
-    st.markdown("### **OrthoAI Suite** v3.6")
-    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● Система активна (Session Persistent)</span>", unsafe_allow_html=True)
+    st.markdown("### **OrthoAI Suite** v3.7")
+    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● Система активна (Scroll Fix)</span>", unsafe_allow_html=True)
     st.markdown("---")
     
     api_key = st.text_input("🔑 Google Gemini API Key:", type="password", placeholder="Введите ключ...")
@@ -107,7 +112,7 @@ with st.sidebar:
         ["Школа Шварца / Стенаера", "Анализ Риккетса", "Джакобс / ТРГ"]
     )
     st.markdown("---")
-    st.info("💡 Данные теперь сохраняются в памяти сессии при скачивании отчетов.")
+    st.info("💡 Скролл страницы полностью разблокирован для просмотра объемных отчетов.")
 
 # Главный экран
 st.title("🦷 Клинический Ортодонтический Координатор")
@@ -207,13 +212,12 @@ if generate_btn:
                             raise api_err
 
                 if response:
-                    # Сохраняем результат в сессию, чтобы он не пропадал при скачивании
                     st.session_state.generated_result = response.text
 
             except Exception as e:
                 st.error(f"Произошла ошибка при обращении к API: {e}")
 
-# Отображение результатов, если они есть в памяти сессии
+# Отображение результатов из памяти сессии
 if st.session_state.generated_result:
     st.markdown("---")
     st.success("✅ Протокол успешно сформирован и зафиксирован в памяти сессии!")
