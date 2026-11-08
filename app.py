@@ -11,10 +11,10 @@ except ImportError:
     import streamlit as st
 
 try:
-    from google import genai
+    import google.genai as genai
 except ImportError:
     install("google-genai")
-    from google import genai
+    import google.genai as genai
 
 try:
     from PIL import Image
@@ -30,82 +30,147 @@ except ImportError:
 
 import io
 
-st.set_page_config(page_title="Стоматологический Эксперт-Координатор", page_icon="🦷", layout="centered")
-
-st.title("🦷 Ортодонтический и клинический план лечения (Gemini)")
-st.write("Загрузите снимки, документы или презентацию (PPTX) для получения экспертного протокола лечения с подробной биомеханикой.")
-
-api_key = st.text_input("Введите ваш Google Gemini API Key:", type="password")
-
-SYSTEM_PROMPT = """
-Роль: Ты — ведущий профессор, доктор медицинских наук, заведующий кафедрой ортодонтии и эксперт высшей категории. Ты обучаешь своего ординатора (ученика-врача) составлению идеальных, пошаговых и высокоточных планов ортодонтического лечения. 
-
-Правила работы и мышления эксперта:
-1. Максимальная ортодонтическая точность и биомеханика: Никогда не пиши общими фразами вроде «установить брекеты» или «исправить прикус». Ты обязан расписать пошаговую биомеханику:
-   - Куда конкретно устанавливается пружина (например: раскрывающая нитиноловая пружина Open Coil Spring на дуге 0.016x0.022 SS между зубами 13 и 15 по системе Виола для создания места под зуб 14).
-   - Какие тяги и эластики необходимы (например: межчелюстные тяги II класса 3/16 4.5 oz от клыка в/ч к моляру н/ч).
-   - Применение аппаратуры и опор (накладки, дистализаторы, аппараты Forsus/Herbst, минивинты/TADs) с четким указанием векторов сил и анатомических ориентиров.
-2. Глубокий цефалометрический анализ: Анализируй углы (ANB, SNB, SNA, ML-NSL, Ar-Go-Me) и положение резцов. Объясняй ученику причинно-следственные связи: почему при данном скелетном классе и типе роста мы выбираем именно эту механику.
-3. Обучающий тон наставника: Обращайся к врачу как строгий, но мудрый профессор: «Коллега, обратите внимание на...», «Для коррекции этого угла нам потребуется...», «Обязательно установите пружину на этапе...».
-4. Пошаговая структура по международной системе Виола (11-48).
-
-Формат вывода ответа (строго соблюдай разделы):
-• Разбор цефалометрии и диагноз (клинический разбор профессора).
-• Этап 1. Терапевтическая подготовка и санация (какие зубы пролечить/удалить перед ортодонтией).
-• Этап 2. Нивелирование и выравнивание (последовательность дуг, стартовые манипуляции).
-• Этап 3. Биомеханика и коррекция прикуса (детализированные указания: где именно ставить пружины, накладки, тяги, векторы сил, дистализацию или винты).
-• Этап 4. Завершение, юстировка окклюзии и ретенция.
-• Рекомендации и риски для ординатора.
-
-Дисклеймер в конце: «План сформирован экспертной обучающей системой на основе представленных данных и подлежит обязательному утверждению лечащим врачом после очного осмотра».
-"""
-
-uploaded_file = st.file_uploader(
-    "Загрузите снимок, презентацию (PPTX) или документ", 
-    type=["png", "jpg", "jpeg", "pptx", "pdf"]
+# Настройка страницы
+st.set_page_config(
+    page_title="OrthoAI Pro — Клинический Координатор", 
+    page_icon="🦷", 
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-extracted_text_from_file = ""
+# Кастомный CSS для крутого визуального стиля
+st.markdown("""
+    <style>
+    .main {
+        background-color: #0e1117;
+    }
+    .stButton>button {
+        width: 100%;
+        background: linear-gradient(45deg, #2b5876, #4e4376);
+        color: white;
+        font-weight: bold;
+        border-radius: 8px;
+        border: none;
+        padding: 0.6rem 1rem;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background: linear-gradient(45deg, #4e4376, #2b5876);
+        box-shadow: 0 4px 12px rgba(78, 67, 118, 0.4);
+    }
+    .metric-card {
+        background-color: #1e2530;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 5px solid #4e4376;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-if uploaded_file is not None:
-    file_extension = uploaded_file.name.split('.')[-1].lower()
+# Боковая панель (Sidebar) для настроек
+with st.sidebar:
+    st.image("https://img.icons8.com/color/96/tooth.png", width=70)
+    st.title("OrthoAI Pro")
+    st.markdown("---")
     
-    if file_extension in ["png", "jpg", "jpeg"]:
-        st.image(uploaded_file, caption="Загруженное изображение / снимок", use_column_width=True)
-    elif file_extension == "pptx":
-        st.info("📊 Презентация PowerPoint успешно загружена. Извлекаем данные слайдов...")
-        try:
-            prs = Presentation(io.BytesIO(uploaded_file.getvalue()))
-            slide_texts = []
-            for i, slide in enumerate(prs.slides):
-                slide_text = f"--- Слайд {i+1} ---\n"
-                for shape in slide.shapes:
-                    if shape.has_text_frame:
-                        for paragraph in shape.text_frame.paragraphs:
-                            slide_text += paragraph.text + "\n"
-                slide_texts.append(slide_text)
-            extracted_text_from_file = "\n".join(slide_texts)
-            st.text_area("Извлеченный текст из презентации:", extracted_text_from_file, height=150)
-        except Exception as e:
-            st.error(f"Не удалось прочитать презентацию: {e}")
-    elif file_extension == "pdf":
-        st.info("📄 PDF документ загружен.")
+    st.subheader("🔑 Авторизация")
+    api_key = st.text_input("Google Gemini API Key:", type="password", placeholder="AIzaSy...")
+    
+    st.markdown("---")
+    st.subheader("⚙️ Параметры протокола")
+    appliance_type = st.selectbox(
+        "Основная аппаратура:",
+        ["Брекет-система (Прямая дуга / MBT)", "Элайнеры (Прозрачные каппы)", "Комбинированное лечение", "Аппарат Forsus / Herbst / Дистализаторы"]
+    )
+    
+    cepha_school = st.selectbox(
+        "Цефалометрический стандарт:",
+        ["Школа Шварца / Стенаера", "Анализ Риккетса", "Джакобс / ТРГ боковая проекция"]
+    )
+    
+    st.markdown("---")
+    st.info("💡 **Совет для ординатора:** Загружайте презентации с ТРГ-расчетами и фотографии окклюзии для максимальной точности биомеханики.")
 
-doctor_notes = st.text_area("Опишите жалобы, данные осмотра или дополнительные задачи:", placeholder="Например: Жалобы на дистальный прикус, скученность. Проверьте вектор тяги и пружины...")
+# Главный экран
+st.title("🦷 Интеллектуальный ортодонтический координатор")
+st.markdown("Экспертная система анализа клинических данных, ТРГ и составления пошаговой биомеханики лечения под кураторством ИИ-профессора.")
 
-if st.button("🚀 Сгенерировать план лечения"):
+# Колонки для разделения интерфейса
+col1, col2 = st.columns([1, 1], gap="large")
+
+with col1:
+    st.markdown("### 📁 Загрузка данных пациента")
+    uploaded_file = st.file_uploader(
+        "Перетащите снимок, ТРГ-презентацию (PPTX) или документ", 
+        type=["png", "jpg", "jpeg", "pptx", "pdf"]
+    )
+    
+    extracted_text_from_file = ""
+
+    if uploaded_file is not None:
+        file_extension = uploaded_file.name.split('.')[-1].lower()
+        
+        if file_extension in ["png", "jpg", "jpeg"]:
+            st.image(uploaded_file, caption="Загруженный снимок / фото", use_column_width=True)
+        elif file_extension == "pptx":
+            st.success("📊 Презентация успешно прочитана!")
+            try:
+                prs = Presentation(io.BytesIO(uploaded_file.getvalue()))
+                slide_texts = []
+                for i, slide in enumerate(prs.slides):
+                    slide_text = f"--- Слайд {i+1} ---\n"
+                    for shape in slide.shapes:
+                        if shape.has_text_frame:
+                            for paragraph in shape.text_frame.paragraphs:
+                                slide_text += paragraph.text + "\n"
+                    slide_texts.append(slide_text)
+                extracted_text_from_file = "\n".join(slide_texts)
+                with st.expander("📄 Посмотреть извлеченный текст из презентации"):
+                    st.text_area("", extracted_text_from_file, height=200)
+            except Exception as e:
+                st.error(f"Ошибка чтения презентации: {e}")
+        elif file_extension == "pdf":
+            st.info("📄 PDF документ прикреплен к анализу.")
+
+with col2:
+    st.markdown("### 📝 Клинические жалобы и анамнез")
+    doctor_notes = st.text_area(
+        "Опишите данные осмотра, углы, скученность или пожелания к лечению:", 
+        placeholder="Например: Пациент с дистальным прикусом, класс II. Скученность во фронтальном отделе. Требуется расчет биомеханики с пружинами...",
+        height=210
+    )
+    
+    generate_btn = st.button("🚀 Сгенерировать экспертный план лечения")
+
+# Системный промпт профессора
+SYSTEM_PROMPT = f"""
+Роль: Ты — ведущий профессор, доктор медицинских наук, заведующий кафедрой ортодонтии. Ты обучаешь своего ординатора составлению идеальных, пошаговых планов лечения.
+Выбранный тип аппаратуры: {appliance_type}.
+Цефалометрическая школа: {cepha_school}.
+
+Правила анализа:
+1. Биомеханика: Расписывай конкретные точки приложения сил, векторы тяг, где именно ставятся пружины (например, нитиноловая пружина Open Coil между зубами 13 и 15 по Виола), межчелюстные эластики, винты или аппараты.
+2. Цефалометрия: Учитывай углы (ANB, SNB, SNA, ML-NSL) и объясняй их клиническое значение.
+3. Структура ответа: Разбор цефалометрии, Этап 1 (Санация), Этап 2 (Нивелирование), Этап 3 (Биомеханика и коррекция прикуса), Этап 4 (Ретенция).
+4. Тон: Профессиональный наставник.
+Дисклеймер в конце: «План сформирован экспертной системой и подлежит утверждению лечащим врачом».
+"""
+
+# Генерация результата
+if generate_btn:
     if not api_key:
-        st.error("Пожалуйста, введите ваш Google Gemini API Key.")
+        st.sidebar.error("⚠️ Введите API Key в боковой панели слева!")
+        st.error("Пожалуйста, укажите ваш Google Gemini API Key в боковой панели.")
     elif not doctor_notes and not uploaded_file:
-        st.warning("Пожалуйста, введите описание или загрузите файл/снимок.")
+        st.warning("⚠️ Пожалуйста, добавьте описание или загрузите файл с данными пациента.")
     else:
-        with st.spinner("Профессор-ортодонт анализирует биомеханику и формирует клинический протокол..."):
+        with st.spinner("🔬 Профессор-ортодонт рассчитывает биомеханику и составляет протокол..."):
             try:
                 client = genai.Client(api_key=api_key)
                 
-                full_query = SYSTEM_PROMPT + "\n\nДанные от врача/ординатора:\n" + doctor_notes
+                full_query = SYSTEM_PROMPT + "\n\nДанные от ординатора:\n" + doctor_notes
                 if extracted_text_from_file:
-                    full_query += f"\n\nДанные из презентации (ТРГ/КТ/Карточка):\n{extracted_text_from_file}"
+                    full_query += f"\n\nДанные из слайдов презентации:\n{extracted_text_from_file}"
 
                 contents = [full_query]
                 
@@ -120,9 +185,19 @@ if st.button("🚀 Сгенерировать план лечения"):
                     contents=contents
                 )
 
-                st.success("Экспертный план лечения составлен!")
                 st.markdown("---")
+                st.success("✅ Экспертный клинический протокол успешно составлен!")
+                
+                # Вывод результата в красивом блоке
                 st.markdown(response.text)
+                
+                # Кнопка скачивания отчета
+                st.download_button(
+                    label="📥 Скачать план лечения (.txt)",
+                    data=response.text,
+                    file_name="ortho_treatment_plan.txt",
+                    mime="text/plain"
+                )
 
             except Exception as e:
-                st.error(f"Произошла ошибка при обращении к Gemini: {e}")
+                st.error(f"Произошла ошибка при обращении к API: {e}")
