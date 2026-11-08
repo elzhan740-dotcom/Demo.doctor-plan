@@ -92,8 +92,8 @@ if "generated_result" not in st.session_state:
 # Боковая панель
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/tooth.png", width=60)
-    st.markdown("### **OrthoAI Suite** v4.0")
-    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● 3D Виола-Схема Активна</span>", unsafe_allow_html=True)
+    st.markdown("### **OrthoAI Suite** v4.1")
+    st.markdown("<span style='color: #38ef7d; font-size: 12px;'>● 3D Дуга Челюсти Активна</span>", unsafe_allow_html=True)
     st.markdown("---")
     
     api_key = st.text_input("🔑 Google Gemini API Key:", type="password", placeholder="Введите ключ...")
@@ -218,7 +218,7 @@ if st.session_state.generated_result:
     st.markdown("---")
     st.success("✅ Протокол сформирован!")
     
-    tab1, tab2 = st.tabs(["📋 Экспертный протокол", "🎮 3D Анатомическая схема (FDI Виола)"])
+    tab1, tab2 = st.tabs(["📋 Экспертный протокол", "🎮 3D Дуга челюсти (Система Виола)"])
     
     with tab1:
         st.markdown(st.session_state.generated_result)
@@ -229,11 +229,10 @@ if st.session_state.generated_result:
         )
 
     with tab2:
-        st.markdown("### 🧊 3D Зубочелюстная карта с международной нумерацией")
-        st.markdown("<span style='color: #94a3b8; font-size: 14px;'>🖱️ Зажмите ЛКМ и вращайте модель | 📜 Колесико: Зумирование к зубам</span>", unsafe_allow_html=True)
+        st.markdown("### 🧊 Объемная 3D-модель зубных рядов (Анатомическая дуга)")
+        st.markdown("<span style='color: #94a3b8; font-size: 14px;'>🖱️ Зажмите ЛКМ и вращайте челюсть | 📜 Колесико мыши: Приближение</span>", unsafe_allow_html=True)
         
-        # Интерактивная 3D-карта зубной дуги с нумерацией Виола (11-48)
-        fdi_3d_code = """
+        native_3d_code = """
         <!DOCTYPE html>
         <html>
         <head>
@@ -245,14 +244,14 @@ if st.session_state.generated_result:
             </style>
         </head>
         <body>
-            <div class="hud">SYSTEM: FDI_VIOLA_3D // ANATOMICAL_MAP</div>
+            <div class="hud">SYSTEM: 3D_JAW_ARCH // FDI_VIOLA</div>
             <canvas id="c" width="850" height="580"></canvas>
             <script>
                 const canvas = document.getElementById('c');
                 const ctx = canvas.getContext('2d');
 
-                let rotX = 0.5;
-                let rotY = 0;
+                let rotX = 0.6;
+                let rotY = 0.3;
                 let zoom = 1.0;
                 let isDragging = false;
                 let lastX = 0, lastY = 0;
@@ -269,43 +268,40 @@ if st.session_state.generated_result:
                 canvas.addEventListener('wheel', e => {
                     e.preventDefault();
                     zoom += e.deltaY * -0.001;
-                    zoom = Math.max(0.5, Math.min(2.2, zoom));
+                    zoom = Math.max(0.6, Math.min(2.5, zoom));
                 });
 
-                // База зубных номеров FDI
-                const upperTeethFDI = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
-                const lowerTeethFDI = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+                const upperFDI = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+                const lowerFDI = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
 
-                function getTeethData() {
-                    let teeth = [];
-                    // Верхняя челюсть (Upper)
+                function getArch() {
+                    let arch = [];
+                    // Верхняя челюсть (параболическая дуга)
                     for (let i = 0; i < 16; i++) {
-                        let angle = (i / 15 - 0.5) * Math.PI * 0.85;
-                        let radius = 140;
-                        let x = Math.sin(angle) * radius;
-                        let z = Math.cos(angle) * radius - 40;
-                        teeth.push({ x, y: -55, z, fdi: upperTeethFDI[i], jaw: 'upper' });
+                        let t = (i / 15) * 2 - 1;
+                        let x = t * 130;
+                        let z = (Math.pow(t, 2) * -90) + 50;
+                        arch.push({ x, y: -45, z, fdi: upperFDI[i], jaw: 'upper' });
                     }
-                    // Нижняя челюсть (Lower)
+                    // Нижняя челюсть
                     for (let i = 0; i < 16; i++) {
-                        let angle = (i / 15 - 0.5) * Math.PI * 0.85;
-                        let radius = 132;
-                        let x = Math.sin(angle) * radius;
-                        let z = Math.cos(angle) * radius - 40;
-                        teeth.push({ x, y: 55, z, fdi: lowerTeethFDI[i], jaw: 'lower' });
+                        let t = (i / 15) * 2 - 1;
+                        let x = t * 120;
+                        let z = (Math.pow(t, 2) * -80) + 40;
+                        arch.push({ x, y: 45, z, fdi: lowerFDI[i], jaw: 'lower' });
                     }
-                    return teeth;
+                    return arch;
                 }
-                const teethData = getTeethData();
+                const teeth = getArch();
 
                 function draw() {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.save();
                     ctx.translate(canvas.width / 2, canvas.height / 2);
 
-                    if (!isDragging) rotY += 0.005;
+                    if (!isDragging) rotY += 0.004;
 
-                    let projected = teethData.map(t => {
+                    let projected = teeth.map(t => {
                         let x1 = t.x * Math.cos(rotY) - t.z * Math.sin(rotY);
                         let z1 = t.x * Math.sin(rotY) + t.z * Math.cos(rotY);
                         let y1 = t.y;
@@ -314,8 +310,8 @@ if st.session_state.generated_result:
                         let z2 = y1 * Math.sin(rotX) + z1 * Math.cos(rotX);
                         let x2 = x1;
 
-                        let fov = 450;
-                        let scale = (fov / (fov + z2 + 250)) * zoom;
+                        let fov = 500;
+                        let scale = (fov / (fov + z2 + 300)) * zoom;
                         return {
                             x: x2 * scale,
                             y: y2 * scale,
@@ -333,26 +329,25 @@ if st.session_state.generated_result:
                         ctx.translate(p.x, p.y);
                         ctx.scale(p.scale, p.scale);
 
-                        // Отрисовка зуба (анатомический 3D-блок)
-                        ctx.fillStyle = '#f8fafc';
+                        // Форма зуба
+                        ctx.fillStyle = '#f1f5f9';
                         ctx.strokeStyle = '#0284c7';
                         ctx.lineWidth = 2;
 
                         ctx.beginPath();
-                        ctx.roundRect(-14, -18, 28, 36, 8);
+                        ctx.roundRect(-12, -16, 24, 32, 6);
                         ctx.fill();
                         ctx.stroke();
 
-                        // Металлический брекет в центре зуба
+                        // Брекет
                         ctx.fillStyle = '#00f2fe';
-                        ctx.fillRect(-5, -5, 10, 10);
+                        ctx.fillRect(-4, -4, 8, 8);
 
-                        // Номер зуба по Виола (FDI)
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 12px sans-serif';
+                        // Номер Виола
+                        ctx.fillStyle = '#38ef7d';
+                        ctx.font = 'bold 11px monospace';
                         ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(p.fdi, 0, p.jaw === 'upper' ? -28 : 28);
+                        ctx.fillText(p.fdi, 0, p.jaw === 'upper' ? -24 : 26);
 
                         ctx.restore();
                     });
@@ -365,4 +360,4 @@ if st.session_state.generated_result:
         </body>
         </html>
         """
-        components.html(fdi_3d_code, height=640)
+        components.html(native_3d_code, height=640)
